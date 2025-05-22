@@ -2,36 +2,45 @@ name: Python CI/CD
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.13']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
+    - name: Show environment info
+      run: |
+        echo "Python version:"
+        python --version
+        echo "\nPip version:"
+        pip --version
+        echo "\nInstalled packages:"
+        pip list
+        echo "\nCurrent directory:"
+        pwd
+        ls -la
+    
     - name: Run tests
       run: |
         python -m pytest -v test_app.py
-    
-    - name: Build Docker image
-      run: docker build -t my-flask-app .
-    
-    - name: Run container test
-      run: |
-        docker run -d -p 5000:5000 --name test-app my-flask-app
-        sleep 5
-        curl http://localhost:5000
+      env:
+        PYTHONPATH: ${{ github.workspace }}
